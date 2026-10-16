@@ -1,0 +1,829 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}body{margin:0}</style></head><body>
+<title>Pausita</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: un "widget" compañero. Escenario con el personaje arriba, la tarjeta de pausa debajo; en escritorio, el resumen del día en una columna lateral. */
+:root{
+  --bg:#ECF0EA; --surface:#FFFFFF; --surface-2:#F4F7F2; --stage:#E2E9DF;
+  --ink:#1B211D; --muted:#5D6961; --line:#D8DFD5; --sticker:#FFFFFF; --limb:#1E1E1E;
+  --ok:#23864B; --ok-soft:#DDF1E4;
+  --accent:#22A6D9; --accent-ink:#0A6C93; --accent-soft:#DAF1FA;
+  --font-display:"Fredoka","Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --r-lg:22px; --r-md:14px; --r-pill:999px;
+}
+:root[data-char="tomi"]{ --accent:#E5484D; --accent-ink:#B0232A; --accent-soft:#FCE3E3 }
+:root[data-char="brocco"]{ --accent:#3FA34D; --accent-ink:#236F30; --accent-soft:#E0F2E2 }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121714; --surface:#1B221E; --surface-2:#222A25; --stage:#1F2823;
+    --ink:#E8EEE8; --muted:#9CA99F; --line:#2E3832; --ok:#5BD08A; --ok-soft:#173826;
+    --accent-ink:#72D3F6; --accent-soft:#16323F; color-scheme:dark;
+  }
+  :root:not([data-theme="light"])[data-char="tomi"]{ --accent-ink:#FF8E92; --accent-soft:#3A1E20 }
+  :root:not([data-theme="light"])[data-char="brocco"]{ --accent-ink:#80D98B; --accent-soft:#1A3320 }
+}
+:root[data-theme="dark"]{
+  --bg:#121714; --surface:#1B221E; --surface-2:#222A25; --stage:#1F2823;
+  --ink:#E8EEE8; --muted:#9CA99F; --line:#2E3832; --ok:#5BD08A; --ok-soft:#173826;
+  --accent-ink:#72D3F6; --accent-soft:#16323F; color-scheme:dark;
+}
+:root[data-theme="dark"][data-char="tomi"]{ --accent-ink:#FF8E92; --accent-soft:#3A1E20 }
+:root[data-theme="dark"][data-char="brocco"]{ --accent-ink:#80D98B; --accent-soft:#1A3320 }
+
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 40px}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;margin:0;text-wrap:balance;line-height:1.15}
+.app{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+
+/* Top */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{font-size:1.75rem;letter-spacing:-.01em}
+.brand span{color:var(--muted);font-size:.95rem}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:var(--r-pill);background:var(--surface);border:1px solid var(--line);font-size:.82rem;font-weight:600;color:var(--muted)}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.chip.on i{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
+.chip.alert i{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+@media (min-width:860px){ .grid{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start} }
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px}
+
+.banner{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;background:var(--accent-soft);border:2px solid var(--accent);border-radius:var(--r-lg);padding:12px 16px;font-weight:500}
+.banner span{min-width:0}
+.banner-acts{display:flex;gap:8px;flex-wrap:wrap}
+.testmsg{font-size:.85rem;color:var(--muted)}
+
+/* Stage */
+.stage{background:var(--stage);border:none;display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 18px;align-items:center;padding:20px}
+@media (max-width:480px){ .stage{grid-template-columns:110px minmax(0,1fr);padding:16px} }
+.stage-art{grid-row:span 2;align-self:end}
+.stage-art svg{width:100%;height:auto;display:block;overflow:visible}
+.bubble{position:relative;background:var(--surface);border-radius:var(--r-md);padding:10px 14px;font-weight:500;min-width:0}
+.bubble::before{content:"";position:absolute;left:-7px;bottom:16px;width:14px;height:14px;background:var(--surface);transform:rotate(45deg);border-radius:3px}
+.bubble b{font-family:var(--font-display);font-weight:600;color:var(--accent-ink)}
+.status{display:flex;flex-direction:column;gap:6px;min-width:0}
+.count{font-family:var(--font-display);font-size:2.6rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.count.small{font-size:1.6rem}
+.count-label{color:var(--muted);font-size:.9rem}
+.bar{height:6px;border-radius:var(--r-pill);background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:inherit;transition:width .8s linear}
+.actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.pausemenu{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.9rem;color:var(--muted)}
+
+.btn{border:none;cursor:pointer;border-radius:var(--r-pill);padding:9px 18px;font-weight:600;font-size:.92rem;background:color-mix(in srgb,var(--ink) 8%,var(--surface));color:var(--ink);transition:transform .12s ease,background .15s}
+.btn:hover{background:color-mix(in srgb,var(--ink) 14%,var(--surface))}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover{background:color-mix(in srgb,var(--ink) 85%,var(--accent))}
+.btn.ghost{background:transparent;padding-inline:10px;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.btn.big{padding:12px 24px;font-size:1rem}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* Nudge card (la tarjeta del video) */
+.nudge{background:var(--surface);border-radius:var(--r-lg);box-shadow:0 10px 30px -12px color-mix(in srgb,var(--ink) 35%,transparent),0 0 0 1px var(--line);overflow:hidden;position:relative}
+.nudge.enter{animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+.ninner{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;padding:16px}
+@media (max-width:480px){ .ninner{grid-template-columns:84px minmax(0,1fr);gap:12px;padding:14px} }
+.thumb{background:var(--accent-soft);border-radius:var(--r-md);display:flex;align-items:flex-end;justify-content:center;padding:8px 6px 4px;align-self:start}
+.thumb svg{width:100%;height:auto;overflow:visible}
+.nbody{display:flex;flex-direction:column;gap:6px;min-width:0}
+.kicker{font-family:var(--font-display);font-weight:600;color:var(--accent-ink);font-size:.95rem}
+.nhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.nhead h3{font-size:1.25rem}
+.tally{color:var(--muted);font-size:.82rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.desc{margin:0;color:var(--muted)}
+.dose-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.dose{color:var(--accent-ink);font-weight:700;font-size:.92rem}
+.howto{background:none;border:none;cursor:pointer;color:var(--muted);font-weight:600;font-size:.88rem;padding:2px 0}
+.howto:hover{color:var(--ink)}
+.howto span{display:inline-block;transition:transform .2s}
+.howto[aria-expanded="true"] span{transform:rotate(180deg)}
+.steps{margin:2px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:3px;font-size:.92rem}
+.steps li{color:var(--muted);transition:color .2s}
+.steps li.now{color:var(--ink);font-weight:600}
+.nact{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+.nact .dur{margin-left:auto;color:var(--muted);font-size:.88rem;font-variant-numeric:tabular-nums}
+.okline{display:flex;align-items:center;gap:8px;font-weight:600;margin-top:6px}
+.okline svg{flex:none}
+.prog{height:5px;background:transparent}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width 1s linear}
+.nudge.done .prog i{background:var(--ok);width:100%!important}
+.safety{font-size:.8rem;color:var(--muted);margin:2px 0 0}
+
+/* Plan de la hora */
+.plan h2{font-size:1.05rem;margin-bottom:10px}
+.plan ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.plan li{background:var(--surface-2);border-radius:var(--r-md);padding:10px 12px;display:flex;flex-direction:column;gap:2px;border:2px solid transparent;min-width:0}
+.plan li.now{border-color:var(--accent);background:var(--accent-soft)}
+.plan .when{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.plan .what{font-weight:600;font-size:.92rem;line-height:1.25}
+.plan .why{font-size:.8rem;color:var(--muted);line-height:1.3}
+@media (max-width:480px){ .plan ol{grid-template-columns:minmax(0,1fr)} }
+
+/* Hoy */
+.today-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
+.today-head h2{font-size:1.25rem}
+.today-head span{color:var(--muted);font-size:.88rem}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:var(--surface-2);border-radius:var(--r-md);padding:10px 12px;min-width:0}
+.stat b{display:block;font-family:var(--font-display);font-size:1.7rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:.8rem;color:var(--muted)}
+.water{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.water .lbl{font-weight:600;min-width:52px}
+.glasses{display:flex;gap:4px;flex-wrap:wrap;flex:1;min-width:0}
+.glass{width:16px;height:22px;border:2px solid var(--accent);border-top-width:0;border-radius:0 0 5px 5px;position:relative;overflow:hidden}
+.glass.full::after{content:"";position:absolute;inset:4px 0 0;background:var(--accent)}
+.stepper{display:flex;gap:4px}
+.stepper .btn{padding:4px 12px}
+.week{margin-top:16px}
+.week-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;text-align:center}
+.dot{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.75rem;color:var(--muted)}
+.dot i{width:26px;height:26px;border-radius:50%;background:var(--surface-2);border:2px solid var(--line);display:grid;place-items:center;font-style:normal;font-size:.72rem;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.dot.met i{background:var(--accent);border-color:var(--accent);color:#fff}
+.dot.today i{outline:2px solid var(--ink);outline-offset:2px}
+.week p{margin:8px 0 0;font-size:.8rem;color:var(--muted)}
+
+/* Details */
+details.card{padding:0}
+details.card summary{list-style:none;cursor:pointer;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary h2{font-size:1.1rem}
+details.card summary .meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:8px}
+details.card summary .meta::after{content:"▾";transition:transform .2s}
+details[open].card summary .meta::after{transform:rotate(180deg)}
+.dbody{padding:0 18px 18px;display:flex;flex-direction:column;gap:14px}
+.check{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.check input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex:none}
+.check span{min-width:0}
+.check small{display:block;color:var(--muted);font-size:.82rem}
+.chars{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.charopt{position:relative;cursor:pointer}
+.charopt input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.charopt .face{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:var(--r-md);border:2px solid var(--line);background:var(--surface-2);text-align:center}
+.charopt svg{width:64px;height:auto;overflow:visible}
+.charopt b{font-family:var(--font-display);font-weight:600}
+.charopt small{color:var(--muted);font-size:.72rem;line-height:1.2}
+.charopt input:checked + .face{border-color:var(--accent);background:var(--accent-soft)}
+.charopt input:focus-visible + .face{outline:3px solid var(--accent);outline-offset:2px}
+.field{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.field label{font-weight:600}
+.field select,.field input[type=time],.field input[type=number]{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.field input[type=number]{width:72px}
+.hours{display:flex;gap:6px;align-items:center}
+.fine{font-size:.82rem;color:var(--muted);margin:0;line-height:1.45}
+
+/* Character animation */
+.bob{animation:bob 2.6s ease-in-out infinite;transform-origin:100px 220px}
+.wiggle{animation:wiggle .9s ease-in-out 3;transform-origin:100px 220px}
+.breathe{animation:breathe 10s ease-in-out infinite;transform-origin:100px 160px}
+.hop{animation:hop .6s ease-in-out 3;transform-origin:100px 220px}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+@keyframes breathe{0%,100%{transform:scale(1)}40%{transform:scale(1.05)}}
+@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+@keyframes pop{0%{transform:translateY(14px) scale(.96);opacity:.4}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){ .bob,.wiggle,.breathe,.hop,.nudge.enter{animation:none} .bar i,.prog i{transition:none} }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><h1>Pausita</h1><span id="brandSub">con Chispa</span></div>
+    <span class="chip" id="chip"><i></i><span id="chipText">Sin empezar</span></span>
+  </header>
+
+  <div class="banner" id="banner" hidden><span id="bannerText"></span><span class="banner-acts"><button class="btn primary" id="bannerBtn" hidden>Activar avisos de Windows</button><button class="btn" id="bannerTest">Probar aviso en 5 s</button></span></div>
+
+  <main class="grid">
+    <section class="col">
+      <div class="card stage">
+        <div class="stage-art" id="stageArt"></div>
+        <div class="bubble" id="bubble"></div>
+        <div class="status">
+          <div class="count" id="count">20:00</div>
+          <div class="count-label" id="countLabel">entre pausas</div>
+          <div class="bar"><i id="barFill"></i></div>
+        </div>
+        <div class="actions" id="stageActions"></div>
+        <div class="pausemenu" id="pauseMenu" hidden>
+          Opciones:
+          <button class="btn" data-pause="60">1 hora (reunión)</button>
+          <button class="btn" data-pause="tomorrow">Hasta mañana</button>
+          <button class="btn" data-pause="none">Hasta que vuelva</button>
+          <button class="btn" data-pause="back">Volver a la anterior</button>
+          <button class="btn" data-pause="reset">Reiniciar desde el inicio</button>
+          <button class="btn ghost" data-pause="cancel">Cancelar</button>
+        </div>
+      </div>
+
+      <div class="nudge" id="nudge" hidden></div>
+
+      <div class="card plan">
+        <h2>Así se reparte cada hora</h2>
+        <ol id="plan"></ol>
+      </div>
+    </section>
+
+    <section class="col">
+      <div class="card">
+        <div class="today-head"><h2>Hoy</h2><span id="todayDate"></span></div>
+        <div class="stats">
+          <div class="stat"><b id="stDone">0</b><span>pausas hechas</span></div>
+          <div class="stat"><b id="stMoves">0</b><span>veces de pie</span></div>
+          <div class="stat"><b id="stStreak">0</b><span>días de racha</span></div>
+        </div>
+        <div class="water">
+          <span class="lbl">Agua</span>
+          <div class="glasses" id="glasses" aria-label="Vasos de agua"></div>
+          <div class="stepper">
+            <button class="btn" id="waterMinus" aria-label="Quitar un vaso">−</button>
+            <button class="btn" id="waterPlus" aria-label="Sumar un vaso">+ vaso</button>
+          </div>
+        </div>
+        <div class="week">
+          <div class="week-row" id="week"></div>
+          <p>Un día cuenta para la racha con 3 pausas o más.</p>
+        </div>
+      </div>
+
+      <details class="card" id="setupBox">
+        <summary><h2>Revisa tu puesto</h2><span class="meta" id="setupMeta">0 de 6</span></summary>
+        <div class="dbody" id="setupList"></div>
+      </details>
+
+      <details class="card" id="settingsBox">
+        <summary><h2>Ajustes</h2><span class="meta">Personaje, horario, sonido</span></summary>
+        <div class="dbody">
+          <div class="chars" id="chars"></div>
+          <div class="field"><label for="setInterval">Aviso cada</label>
+            <select id="setInterval"><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option></select></div>
+          <div class="field"><label for="setStart">Horario</label>
+            <div class="hours"><input type="time" id="setStart" aria-label="Hora de inicio"> a <input type="time" id="setEnd" aria-label="Hora de fin"></div></div>
+          <label class="check" for="setWeekdays"><input type="checkbox" id="setWeekdays"><span>Solo de lunes a viernes</span></label>
+          <label class="check" for="setSound"><input type="checkbox" id="setSound"><span>Sonido al avisar</span></label>
+          <div class="field"><span><b>Notificaciones de Windows</b><small class="fine" id="notifHint" style="display:block"></small></span>
+            <button class="btn" id="notifBtn" hidden>Activar</button></div>
+          <div class="field"><label for="setWater">Meta de agua</label>
+            <span><input type="number" id="setWater" min="4" max="14" step="1"> vasos</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="testSound">Probar sonido</button><button class="btn" id="testNudge">Probar aviso en 5 s</button></div>
+          <span class="testmsg" id="testMsg" aria-live="polite"></span>
+        </div>
+      </details>
+
+      <p class="fine">Deja esta pestaña abierta (puede estar en segundo plano) y el volumen encendido: Pausita te avisa con un sonido y, si la abres como archivo en Chrome o Edge, también con una notificación de Windows. Tus datos se guardan solo en este navegador. Los ejercicios son suaves y no reemplazan el consejo de un profesional de salud: si algo duele, detente.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const KEY = "pausita.v1";
+
+/* ---------- Personajes: cambiar de personaje = cambiar esta ficha ---------- */
+const CHARS = {
+  chispa: {
+    name: "Chispa", species: "Tipo eléctrico", faceY: 100, voice: "zap",
+    cheek: "#FFD60A",
+    lines: {
+      off: "¡Bzzzt! Soy <b>Chispa</b>. Pulsa Empezar y cada {n} minutos te recargo la espalda.",
+      wait: ["Espalda apoyada, hombros sueltos. Yo vigilo el reloj.", "Sigue con lo tuyo, yo te aviso.", "Pantalla a la altura de los ojos, ¿eh? Bzzt.", "Cargando energía para la próxima pausa…"],
+      nudge: ["¡Bzzzt! Siéntate derecho y vamos con esta.", "¡Alerta de joroba! Espalda recta.", "Tu batería postural está baja. ¡Recarga!", "¡Chispazo! Hombros abajo, pecho arriba."],
+      active: "¡Así! Despacio y respirando.",
+      done: ["¡Carga completa!", "¡Eso! Energía al cien.", "¡Bzzt bzzt! Así se hace."],
+      paused: "Modo ahorro de energía. Vuelvo cuando me digas.",
+      off_hours: "Fuera de horario. Me recargo y vuelvo mañana."
+    },
+    back() {
+      return `<polygon class="st" fill="#FFD60A" points="146,150 176,130 164,124 192,96 158,116 168,121 142,138"/>`;
+    },
+    body() {
+      return `
+        <circle class="st" cx="60" cy="68" r="15" fill="#4CC9F0"/><circle cx="60" cy="68" r="7" fill="#1E6F8F"/>
+        <circle class="st" cx="140" cy="68" r="15" fill="#4CC9F0"/><circle cx="140" cy="68" r="7" fill="#1E6F8F"/>
+        <polygon class="st" fill="#FFD60A" points="82,64 94,34 99,52 110,28 112,48 122,40 116,66"/>
+        <ellipse class="st" cx="100" cy="110" rx="56" ry="53" fill="#4CC9F0"/>
+        <ellipse cx="100" cy="132" rx="33" ry="24" fill="#C3F0FF"/>
+        <path d="M96 128 l6 -8 l-1 6 l5 0 l-6 9 l1 -7z" fill="#FFD60A"/>`;
+    }
+  },
+  tomi: {
+    name: "Tomi", species: "Tomate jugoso", faceY: 108, voice: "pop",
+    cheek: "#FF9AA0",
+    lines: {
+      off: "¡Hola! Soy <b>Tomi</b>. Pulsa Empezar y cada {n} minutos evito que te aplastes como salsa.",
+      wait: ["Espalda firme, como tomate recién cosechado.", "Tú trabaja, yo cuido el reloj.", "Hombros relajados, nada de puré.", "Madurando la próxima pausa…"],
+      nudge: ["¡Arriba esa espalda, que te estás aplastando!", "¡Hora de madurar tu postura!", "¡Nada de salsa! Siéntate derecho.", "¡Pausa jugosa! Vamos."],
+      active: "¡Bien firme! Sin prisa.",
+      done: ["¡Jugosísimo!", "¡Así me gusta, bien firme!", "¡Perfecto, en su punto!"],
+      paused: "Me quedo en la nevera hasta que vuelvas.",
+      off_hours: "Fuera de horario. Descansa, mañana seguimos."
+    },
+    back() { return ""; },
+    body() {
+      return `
+        <circle class="st" cx="100" cy="112" r="56" fill="#E5484D"/>
+        <ellipse cx="76" cy="84" rx="12" ry="7" fill="#FFFFFF" opacity=".35" transform="rotate(-30 76 84)"/>
+        <rect x="96" y="40" width="8" height="18" rx="4" fill="#2F7D3A"/>
+        <polygon class="st" fill="#3FA34D" points="100,46 108,60 126,54 114,66 130,74 108,70 100,82 92,70 70,74 86,66 74,54 92,60"/>`;
+    }
+  },
+  brocco: {
+    name: "Brocco", species: "Brócoli valiente", faceY: 126, voice: "crunch",
+    cheek: "#F3A6A0",
+    lines: {
+      off: "Soy <b>Brocco</b>. Pulsa Empezar y cada {n} minutos te ayudo a crecer derecho, como un buen tallo.",
+      wait: ["Tallo recto, raíces en el suelo.", "Tú a lo tuyo, yo vigilo.", "Un tallo torcido no crece. Siéntate bien.", "Juntando clorofila para la próxima…"],
+      nudge: ["¡Tallo recto! Siéntate bien.", "Un poco de verde para tu cuerpo: ¡muévete!", "¡Hora de estirar esas ramitas!", "¡Crunch! Pausa, pausa."],
+      active: "¡Eso es! Despacio, como crece una planta.",
+      done: ["¡Eso es crecer!", "¡Fuerte como un árbol!", "¡Crunch! Bien hecho."],
+      paused: "Me quedo en la maceta hasta que vuelvas.",
+      off_hours: "Fuera de horario. A la sombra hasta mañana."
+    },
+    back() { return ""; },
+    body() {
+      return `
+        <rect class="st" x="54" y="92" width="92" height="74" rx="30" fill="#A6D98F"/>
+        <path d="M84 150 q4 -18 0 -36 M116 150 q-4 -18 0 -36" stroke="#86C06D" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <g class="st">
+          <circle cx="64" cy="82" r="28" fill="#3FA34D"/><circle cx="136" cy="82" r="28" fill="#3FA34D"/>
+          <circle cx="100" cy="62" r="33" fill="#47AE55"/><circle cx="82" cy="98" r="20" fill="#3FA34D"/><circle cx="118" cy="98" r="20" fill="#3FA34D"/>
+        </g>
+        <circle cx="90" cy="54" r="6" fill="#2F8A3C"/><circle cx="112" cy="64" r="5" fill="#2F8A3C"/><circle cx="58" cy="78" r="5" fill="#2F8A3C"/><circle cx="140" cy="76" r="6" fill="#2F8A3C"/>`;
+    }
+  }
+};
+
+/* ---------- Poses (esqueleto compartido) ---------- */
+const LEGS = { ll: [[84,158],[81,190],[76,222]], rl: [[116,158],[119,190],[124,222]] };
+const ARMS_DOWN = { la: [[50,122],[38,146],[40,170]], ra: [[150,122],[162,146],[160,170]] };
+const POSES = {
+  idle:      { ...ARMS_DOWN },
+  wave:      { la: ARMS_DOWN.la, ra: [[150,120],[174,98],[178,70]] },
+  celebrate: { la: [[50,118],[32,92],[28,62]], ra: [[150,118],[168,92],[172,62]] },
+  armsup:    { la: [[50,118],[28,86],[70,56]], ra: [[150,118],[172,86],[130,56]], rot: -7, arrow: "back" },
+  chin:      { ...ARMS_DOWN, tx: -6, arrow: "left" },
+  neck:      { la: ARMS_DOWN.la, ra: [[150,120],[176,82],[128,54]], rot: -13 },
+  shrug:     { la: [[50,120],[26,134],[46,104]], ra: [[150,120],[174,134],[154,104]], arrow: "circle" },
+  wrist:     { la: [[50,124],[110,148],[180,130]], ra: [[150,124],[174,126],[196,122]] },
+  doorway:   { la: [[50,120],[22,120],[22,82]], ra: [[150,120],[178,120],[178,82]], door: true },
+  twist:     { la: [[50,122],[82,150],[128,146]], ra: [[150,122],[178,140],[170,166]], rot: 6, arrow: "twist" },
+  eyes:      { la: ARMS_DOWN.la, ra: [[150,122],[166,98],[128,80]] },
+  posture:   { la: [[50,124],[28,142],[58,152]], ra: [[150,124],[172,142],[142,152]] },
+  breathe:   { la: [[50,122],[30,140],[24,162]], ra: [[150,122],[170,140],[176,162]] },
+  walk:      { la: [[50,122],[44,148],[60,170]], ra: [[150,122],[162,146],[170,164]], ll: [[84,158],[70,190],[58,220]], rl: [[116,158],[126,188],[142,214]] },
+  stand:     { la: [[50,122],[28,126],[10,120]], ra: [[150,122],[172,126],[190,120]], ll: [[84,158],[58,180],[74,222]], rl: [[116,158],[142,180],[126,222]] },
+  sleep:     { ...ARMS_DOWN, zzz: true }
+};
+let svgSeq = 0;
+function limb(p, w) {
+  const d = `M${p[0][0]} ${p[0][1]} Q${p[1][0]} ${p[1][1]} ${p[2][0]} ${p[2][1]}`;
+  return `<path d="${d}" stroke="var(--sticker)" stroke-width="${w + 7}" fill="none" stroke-linecap="round"/>` +
+         `<path d="${d}" stroke="var(--limb)" stroke-width="${w}" fill="none" stroke-linecap="round"/>`;
+}
+function hand(p) { const [x, y] = p[2]; return `<circle cx="${x}" cy="${y}" r="7.5" fill="var(--limb)" stroke="var(--sticker)" stroke-width="3.5"/>`; }
+function foot(p, dir) { const [x, y] = p[2]; return `<ellipse cx="${x + dir * 6}" cy="${y + 2}" rx="13" ry="7" fill="var(--limb)" stroke="var(--sticker)" stroke-width="3.5"/>`; }
+function face(c, kind) {
+  const y = c.faceY, L = 85, R = 115, k = "#1E1E1E";
+  const cheeks = `<circle cx="${L - 13}" cy="${y + 12}" r="6.5" fill="${c.cheek}" opacity=".85"/><circle cx="${R + 13}" cy="${y + 12}" r="6.5" fill="${c.cheek}" opacity=".85"/>`;
+  const oval = (dx = 0) => `<ellipse cx="${L + dx}" cy="${y}" rx="4.6" ry="6.2" fill="${k}"/><ellipse cx="${R + dx}" cy="${y}" rx="4.6" ry="6.2" fill="${k}"/><circle cx="${L + dx + 1.5}" cy="${y - 2.5}" r="1.6" fill="#fff"/><circle cx="${R + dx + 1.5}" cy="${y - 2.5}" r="1.6" fill="#fff"/>`;
+  const closed = (up) => `<path d="M${L - 6} ${y} q6 ${up ? -6 : 6} 12 0 M${R - 6} ${y} q6 ${up ? -6 : 6} 12 0" stroke="${k}" stroke-width="3.2" fill="none" stroke-linecap="round"/>`;
+  const smile = `<path d="M${100 - 9} ${y + 12} q9 9 18 0" stroke="${k}" stroke-width="3.2" fill="none" stroke-linecap="round"/>`;
+  let s = "";
+  switch (kind) {
+    case "hello": s = oval() + `<ellipse cx="100" cy="${y + 15}" rx="7" ry="6" fill="${k}"/><ellipse cx="100" cy="${y + 18}" rx="4" ry="2.5" fill="#F07C82"/>`; break;
+    case "effort": s = `<path d="M${L - 5} ${y - 5} l8 5 l-8 5 M${R + 5} ${y - 5} l-8 5 l8 5" stroke="${k}" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M93 ${y + 14} h14" stroke="${k}" stroke-width="3.2" stroke-linecap="round"/>`; break;
+    case "happy": s = closed(true) + `<path d="M90 ${y + 10} q10 0 20 0 q-2 11 -10 11 q-8 0 -10 -11z" fill="${k}"/>`; break;
+    case "look": s = oval(5) + `<circle cx="100" cy="${y + 15}" r="3.5" fill="${k}"/>`; break;
+    case "calm": s = closed(false) + smile; break;
+    case "sleep": s = `<path d="M${L - 6} ${y + 1} h12 M${R - 6} ${y + 1} h12" stroke="${k}" stroke-width="3.2" stroke-linecap="round"/><circle cx="100" cy="${y + 15}" r="3" fill="${k}"/>`; break;
+    default: s = oval() + smile;
+  }
+  return cheeks + s;
+}
+function arrow(kind, id) {
+  const col = "var(--accent-ink)";
+  const head = `<marker id="ah${id}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="${col}"/></marker>`;
+  const p = d => `<path d="${d}" stroke="${col}" stroke-width="5" fill="none" stroke-linecap="round" marker-end="url(#ah${id})"/>`;
+  const map = {
+    back: p("M44 52 Q24 62 22 88"),
+    left: p("M34 96 L8 96"),
+    circle: p("M30 96 q-14 -14 4 -24") + p("M170 96 q14 -14 -4 -24"),
+    twist: p("M150 196 Q100 214 52 196")
+  };
+  return `<defs>${head}</defs>${map[kind] || ""}`;
+}
+function drawCharacter(charId, poseName = "idle", faceKind = "smile", anim = "") {
+  const c = CHARS[charId] || CHARS.chispa;
+  const P = { ...POSES.idle, ...LEGS, ...(POSES[poseName] || {}) };
+  const id = ++svgSeq;
+  const rot = P.rot || 0, tx = P.tx || 0;
+  const door = P.door ? `<path d="M10 236 V40 H190 V236" stroke="var(--muted)" stroke-width="5" fill="none" opacity=".45" stroke-linejoin="round"/>` : "";
+  const zzz = P.zzz ? `<text x="150" y="52" font-family="var(--font-display)" font-weight="600" font-size="22" fill="var(--muted)">z</text><text x="166" y="34" font-family="var(--font-display)" font-weight="600" font-size="16" fill="var(--muted)">z</text>` : "";
+  return `<svg viewBox="0 0 200 240" role="img" aria-label="${c.name}">
+    <style>.st{stroke:var(--sticker);stroke-width:7;stroke-linejoin:round;paint-order:stroke}</style>
+    ${door}
+    <ellipse cx="100" cy="228" rx="58" ry="7" fill="var(--ink)" opacity=".08"/>
+    <g class="${anim}">
+      ${limb(P.ll, 10)}${limb(P.rl, 10)}${foot(P.ll, -1)}${foot(P.rl, 1)}
+      <g transform="rotate(${rot} 100 160) translate(${tx} 0)">
+        ${c.back()}${c.body()}${face(c, faceKind)}
+        ${limb(P.la, 9)}${limb(P.ra, 9)}${hand(P.la)}${hand(P.ra)}
+      </g>
+      ${P.arrow ? arrow(P.arrow, id) : ""}${zzz}
+    </g>
+  </svg>`;
+}
+
+/* ---------- Ejercicios (revisados con criterio de fisioterapia y ergonomía) ---------- */
+const EX = [
+  { id: "chin", pool: "stretch", title: "Retracción de mentón", desc: "Desliza la cabeza hacia atrás, como si hicieras papada.", dose: "10 repeticiones lentas", secs: 45, pose: "chin", face: "effort",
+    steps: ["Siéntate erguido y mira al frente.", "Lleva el mentón hacia atrás, sin inclinar la cabeza.", "Mantén 2 o 3 segundos y suelta.", "Repite despacio."] },
+  { id: "thoracic", pool: "stretch", title: "Extensión torácica", desc: "Manos detrás de la cabeza y arquea la espalda sobre el respaldo.", dose: "10 repeticiones", secs: 40, pose: "armsup", face: "effort",
+    steps: ["Apoya la zona media de la espalda en el respaldo.", "Manos detrás de la cabeza, codos abiertos.", "Arquea hacia atrás mirando un poco arriba.", "Vuelve despacio. Sin forzar el cuello."] },
+  { id: "neck", pool: "stretch", title: "Inclinación de cuello", desc: "Oreja hacia el hombro; el otro hombro se queda abajo.", dose: "20 s cada lado", secs: 45, pose: "neck", face: "calm",
+    steps: ["Baja los hombros y relájalos.", "Inclina la oreja derecha hacia el hombro derecho.", "Respira 20 segundos, sin rebotar.", "Cambia al lado izquierdo."] },
+  { id: "shoulders", pool: "stretch", title: "Círculos de hombros", desc: "Sube los hombros a las orejas y gíralos hacia atrás.", dose: "10 círculos hacia atrás", secs: 30, pose: "shrug", face: "smile",
+    steps: ["Brazos sueltos a los lados.", "Sube los hombros hacia las orejas.", "Llévalos hacia atrás y abajo.", "Haz círculos amplios y lentos."] },
+  { id: "wrist", pool: "stretch", title: "Estiramiento de muñecas", desc: "Brazo al frente, palma arriba; tira suave de los dedos.", dose: "20 s cada mano", secs: 45, pose: "wrist", face: "calm",
+    steps: ["Estira el brazo con la palma hacia arriba.", "Con la otra mano, lleva los dedos hacia abajo.", "Mantén 20 segundos.", "Cambia de mano. Repite con la palma hacia abajo si quieres."] },
+  { id: "doorway", pool: "stretch", title: "Pecho en el marco de la puerta", desc: "Antebrazos en el marco y da un paso adelante.", dose: "30 s", secs: 30, pose: "doorway", face: "happy",
+    steps: ["Ponte en una puerta, codos a la altura de los hombros.", "Apoya los antebrazos en el marco.", "Da un paso al frente hasta sentir el pecho.", "Respira. Si no hay puerta, junta las escápulas sentado."] },
+  { id: "twist", pool: "stretch", title: "Giro de espalda sentado", desc: "Gira el tronco y sujétate del respaldo.", dose: "15 s cada lado", secs: 35, pose: "twist", face: "calm",
+    steps: ["Pies firmes en el suelo, espalda alta.", "Gira el tronco a la derecha y sujeta el respaldo.", "Mantén 15 segundos respirando.", "Vuelve al centro y gira al otro lado."] },
+  { id: "eyes", pool: "micro", title: "Regla 20-20-20", desc: "Mira algo a unos 6 metros durante 20 segundos y parpadea.", dose: "20 s", secs: 20, pose: "eyes", face: "look",
+    steps: ["Aparta la vista de la pantalla.", "Busca algo lejano: una ventana, el fondo de la sala.", "Parpadea varias veces, despacio."] },
+  { id: "posture", pool: "micro", title: "Revisión de postura", desc: "Repasa tu cuerpo de abajo hacia arriba.", dose: "4 puntos", secs: 20, pose: "posture", face: "happy",
+    steps: ["Pies apoyados en el suelo.", "Espalda apoyada en el respaldo.", "Hombros sueltos, codos cerca del cuerpo.", "Pantalla a la altura de los ojos."] },
+  { id: "breath", pool: "micro", title: "Respiración 4-6", desc: "Inhala por la nariz 4 segundos, exhala 6 por la boca.", dose: "5 respiraciones", secs: 50, pose: "breathe", face: "calm",
+    steps: ["Siéntate cómodo y suelta los hombros.", "Inhala por la nariz contando 4.", "Exhala lento contando 6.", "Repite 5 veces."] },
+  { id: "walk", pool: "move", title: "Vuelta por la oficina", desc: "Levántate y camina. Llena tu agua y descansa la vista.", dose: "2 min", secs: 120, pose: "walk", face: "smile",
+    steps: ["Levántate de la silla.", "Camina hasta el agua o da una vuelta.", "Mira lejos por una ventana.", "Vuelve sin prisa."] },
+  { id: "sitstand", pool: "move", title: "Levántate y siéntate", desc: "Párate y vuelve a sentarte sin usar las manos.", dose: "10 veces", secs: 50, pose: "stand", face: "effort",
+    steps: ["Siéntate al borde de la silla, pies firmes.", "Brazos al frente, ponte de pie.", "Siéntate despacio, controlando.", "Después, camina un minuto si puedes."] }
+];
+const EXBY = Object.fromEntries(EX.map(e => [e.id, e]));
+const POOLS = ["stretch", "micro", "move"];
+const POOL_INFO = {
+  stretch: { kicker: "Hora de estirar", what: "Estiramiento", why: "Cuello, espalda, hombros o muñecas." },
+  micro:   { kicker: "Pausa rápida", what: "Vista y postura", why: "Regla 20-20-20, postura o respiración." },
+  move:    { kicker: "Hora de levantarte", what: "Levántate", why: "Camina y toma agua. Lo que más ayuda." }
+};
+
+/* ---------- Estado ---------- */
+const DEF = { char: "chispa", settings: { interval: 20, start: "09:00", end: "18:00", weekdays: true, sound: true, water: 8 },
+  phase: "off", nextAt: 0, periodStart: 0, pausedUntil: null, cycle: 0, ptr: { stretch: 0, micro: 0, move: 0 },
+  cur: null, activeStart: 0, activeEndsAt: 0, doneUntil: 0, nudgeAt: 0, reminded: false, days: {}, setup: {} };
+let S = load();
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (raw) return { ...DEF, ...raw, settings: { ...DEF.settings, ...raw.settings }, ptr: { ...DEF.ptr, ...raw.ptr } };
+  } catch (e) {}
+  return structuredClone(DEF);
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+const pad = n => String(n).padStart(2, "0");
+const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+function rec(k = dayKey(new Date())) { return (S.days[k] ||= { done: 0, skipped: 0, water: 0, moves: 0, ex: {} }); }
+function pruneDays() { const keep = Object.keys(S.days).sort().slice(-60); S.days = Object.fromEntries(keep.map(k => [k, S.days[k]])); }
+const char = () => CHARS[S.char] || CHARS.chispa;
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const toMin = t => { const [h, m] = (t || "0:0").split(":").map(Number); return h * 60 + m; };
+function workday(d) { return !S.settings.weekdays || (d.getDay() !== 0 && d.getDay() !== 6); }
+function inHours(d) { const m = d.getHours() * 60 + d.getMinutes(); return workday(d) && m >= toMin(S.settings.start) && m < toMin(S.settings.end); }
+function nextWorkStart(from = new Date()) {
+  const [h, m] = S.settings.start.split(":").map(Number);
+  for (let i = 0; i < 9; i++) { const d = new Date(from); d.setDate(d.getDate() + i); d.setHours(h, m, 0, 0); if (d > from && workday(d)) return d.getTime(); }
+  return from.getTime() + 864e5;
+}
+const intervalMs = () => S.settings.interval * 60000;
+function upcoming() { const pool = POOLS[S.cycle % 3]; const list = EX.filter(e => e.pool === pool); return list[S.ptr[pool] % list.length]; }
+function advance() { S.ptr[POOLS[S.cycle % 3]]++; S.cycle++; }
+function schedule() { const now = Date.now(); S.periodStart = now; S.nextAt = now + intervalMs(); }
+
+/* ---------- Sonido ---------- */
+let AC = null;
+function ensureAudio() { try { AC ||= new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); } catch (e) {} }
+function tone(f, t0, dur, type = "sine", vol = .3, f2) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+  g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+  o.connect(g).connect(AC.destination); o.start(t0); o.stop(t0 + dur + .05);
+}
+function play(kind) {
+  if (!S.settings.sound) return; ensureAudio(); if (!AC) return;
+  try {
+    const t = AC.currentTime + .02, v = char().voice;
+    if (kind === "nudge") {
+      if (v === "zap") { tone(1500, t, .14, "square", .04, 260); tone(1500, t + .16, .1, "square", .03, 400); }
+      if (v === "pop") { tone(420, t, .12, "sine", .2, 900); }
+      if (v === "crunch") { tone(240, t, .07, "triangle", .14, 160); tone(260, t + .09, .07, "triangle", .14, 170); }
+      tone(784, t + .3, .5); tone(1175, t + .5, .8); tone(784, t + 1.4, .5); tone(1175, t + 1.6, .9);
+    } else {
+      tone(660, t, .2); tone(990, t + .12, .3); tone(1320, t + .24, .55);
+    }
+  } catch (e) {}
+}
+
+/* ---------- Notificaciones del sistema (solo con Pausita abierta como archivo o en su propia pestaña) ---------- */
+const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+const canNotify = () => !inFrame && "Notification" in window;
+let lastNotif = null; const iconCache = {};
+function makeIcon(id) {
+  if (iconCache[id] !== undefined || !canNotify()) return;
+  iconCache[id] = null;
+  const lit = { "var(--sticker)": "#FFFFFF", "var(--limb)": "#1E1E1E", "var(--ink)": "#1B211D", "var(--muted)": "#5D6961", "var(--accent-ink)": "#0A6C93", "var(--font-display)": "sans-serif" };
+  let svg = drawCharacter(id, "wave", "hello").replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ');
+  for (const [k, v] of Object.entries(lit)) svg = svg.split(k).join(v);
+  const img = new Image();
+  img.onload = () => { try { const cv = document.createElement("canvas"); cv.width = 192; cv.height = 192; const g = cv.getContext("2d"); g.drawImage(img, 18, 2, 156, 187); iconCache[id] = cv.toDataURL("image/png"); } catch (e) {} };
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+async function askNotify() {
+  if (!canNotify() || Notification.permission !== "default") return;
+  try { await Notification.requestPermission(); } catch (e) {}
+  renderNotif();
+}
+function notify(ex) {
+  if (!canNotify() || Notification.permission !== "granted") return;
+  try {
+    closeNotif();
+    const body = `${ex.title} · ${ex.dose}\n${bubbleText.replace(/<[^>]+>/g, "")}`;
+    lastNotif = new Notification(`${char().name}: ${POOL_INFO[ex.pool].kicker}`, { body, tag: "pausita", renotify: true, requireInteraction: true, icon: iconCache[S.char] || undefined });
+    lastNotif.onclick = () => { window.focus(); closeNotif(); };
+  } catch (e) {}
+}
+function closeNotif() { try { lastNotif && lastNotif.close(); } catch (e) {} lastNotif = null; }
+function renderNotif() {
+  const hint = $("notifHint"), btn = $("notifBtn");
+  btn.hidden = true;
+  const bn = $("banner"), bt = $("bannerText"), bb = $("bannerBtn");
+  const perm = canNotify() ? Notification.permission : "none";
+  bn.hidden = perm === "granted"; bb.hidden = perm !== "default";
+  bt.textContent = inFrame ? "Estás usando Pausita dentro de Claude: aquí solo suena. Para que te salga el aviso de Windows, abre el archivo Pausita.html en Chrome o Edge."
+    : perm === "default" ? "Activa los avisos de Windows para enterarte aunque estés en otra ventana."
+    : perm === "denied" ? "Los avisos de Windows están bloqueados para Pausita. Haz clic en el ícono a la izquierda de la barra de direcciones y permite las notificaciones."
+    : "Tu navegador no permite avisos de Windows. Prueba con Chrome o Edge.";
+  if (!canNotify()) { hint.textContent = "Disponibles al abrir Pausita como archivo en Chrome o Edge. Aquí dentro de Claude solo avisa con sonido."; return; }
+  const p = Notification.permission;
+  if (p === "granted") hint.textContent = `Activadas. ${char().name} te avisa aunque estés en otra ventana.`;
+  else if (p === "denied") hint.textContent = "Bloqueadas. Actívalas en el candado o el ícono de la izquierda de la barra de direcciones.";
+  else { hint.textContent = "Pulsa Activar y acepta el permiso del navegador."; btn.hidden = false; }
+}
+
+/* ---------- Acciones ---------- */
+function startDay() { ensureAudio(); askNotify(); S.phase = "waiting"; schedule(); save(); render(); }
+function startNudge() { S.cur = upcoming().id; S.phase = "nudge"; S.nudgeAt = Date.now(); S.reminded = 0; save(); render(true); play("nudge"); notify(EXBY[S.cur]); }
+function startActive() { closeNotif(); const ex = EXBY[S.cur]; S.phase = "active"; S.activeStart = Date.now(); S.activeEndsAt = S.activeStart + ex.secs * 1000; save(); render(); }
+function complete() {
+  const ex = EXBY[S.cur], r = rec(); r.done++; r.ex[ex.id] = (r.ex[ex.id] || 0) + 1; if (ex.pool === "move") r.moves++;
+  advance(); S.phase = "done"; S.doneUntil = Date.now() + 4500; schedule(); save(); render(); play("done");
+}
+function skip() { closeNotif(); rec().skipped++; advance(); S.phase = "waiting"; schedule(); save(); render(); }
+function snooze() { closeNotif(); S.phase = "waiting"; S.periodStart = Date.now(); S.nextAt = S.periodStart + 5 * 60000; save(); render(); }
+function another() { S.ptr[POOLS[S.cycle % 3]]++; S.cur = upcoming().id; save(); render(); }
+function pauseFor(v) {
+  $("pauseMenu").hidden = true; if (v === "cancel") return;
+  if (v === "back") { closeNotif(); if (S.cycle > 0) { S.cycle--; const pool = POOLS[S.cycle % 3]; S.ptr[pool] = Math.max(0, S.ptr[pool] - 1); } S.phase = "waiting"; S.pausedUntil = null; schedule(); save(); render(); return; }
+  if (v === "reset") { closeNotif(); S.cycle = 0; S.phase = "waiting"; S.pausedUntil = null; schedule(); save(); render(); return; }
+  S.phase = "paused";
+  S.pausedUntil = v === "none" ? null : v === "tomorrow" ? nextWorkStart(new Date(new Date().setHours(23, 59, 0, 0))) : Date.now() + Number(v) * 60000;
+  save(); render();
+}
+function resume() { ensureAudio(); S.phase = "waiting"; S.pausedUntil = null; schedule(); save(); render(); }
+
+/* ---------- Render ---------- */
+const fmt = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${pad(s % 60)}`; };
+const clock = ts => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const DAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+let bubbleText = "", lastPhase = null;
+
+function stagePose() {
+  const ex = S.cur && EXBY[S.cur];
+  switch (S.phase) {
+    case "off": return ["wave", "hello", "bob"];
+    case "paused": return ["sleep", "sleep", "breathe"];
+    case "nudge": return [ex.pose, "hello", "wiggle"];
+    case "active": return [ex.pose, ex.face, ex.pose === "breathe" ? "breathe" : "bob"];
+    case "done": return ["celebrate", "happy", "hop"];
+    default: return inHours(new Date()) ? ["idle", "smile", "bob"] : ["sleep", "sleep", "breathe"];
+  }
+}
+function render(entering = false) {
+  const c = char(), L = c.lines;
+  document.documentElement.dataset.char = S.char;
+  makeIcon(S.char);
+  $("brandSub").textContent = `con ${c.name}`;
+  const [pose, fc, anim] = stagePose();
+  $("stageArt").innerHTML = drawCharacter(S.char, pose, fc, anim);
+
+  if (S.phase !== lastPhase || entering) {
+    const n = S.settings.interval;
+    bubbleText = {
+      off: L.off.replace("{n}", n), paused: L.paused, nudge: pick(L.nudge), active: L.active, done: pick(L.done),
+      waiting: inHours(new Date()) ? pick(L.wait) : L.off_hours
+    }[S.phase];
+    lastPhase = S.phase;
+  }
+  $("bubble").innerHTML = bubbleText;
+
+  const acts = $("stageActions"); acts.innerHTML = "";
+  const add = (label, fn, cls = "btn") => { const b = document.createElement("button"); b.className = cls; b.textContent = label; b.onclick = fn; acts.appendChild(b); };
+  if (S.phase === "off") add("Empezar jornada", startDay, "btn primary big");
+  if (S.phase === "waiting") { add("Hacer una pausa ahora", startNudge); add("Pausar o reiniciar", () => { $("pauseMenu").hidden = !$("pauseMenu").hidden; }); }
+  if (S.phase === "paused") add("Reanudar", resume, "btn primary");
+  if (S.phase !== "waiting") $("pauseMenu").hidden = true;
+
+  const chipMap = { off: ["", "Sin empezar"], waiting: ["on", "En marcha"], nudge: ["alert", "¡Pausa ahora!"], active: ["alert", "Haciendo pausa"], done: ["on", "¡Hecho!"], paused: ["", "En pausa"] };
+  let [cc, ct] = chipMap[S.phase];
+  if (S.phase === "waiting" && !inHours(new Date())) { cc = ""; ct = "Fuera de horario"; }
+  $("chip").className = "chip " + cc; $("chipText").textContent = ct;
+
+  renderNudge(entering);
+  renderPlan(); renderToday();
+  update();
+}
+function renderNudge(entering) {
+  const box = $("nudge");
+  if (!["nudge", "active", "done"].includes(S.phase) || !S.cur) { box.hidden = true; return; }
+  const ex = EXBY[S.cur], info = POOL_INFO[ex.pool], count = rec().ex[ex.id] || 0;
+  box.hidden = false;
+  box.className = "nudge" + (S.phase === "done" ? " done" : "") + (entering ? " enter" : "");
+  const open = S.phase === "active" || box.dataset.open === "1";
+  let act = "";
+  if (S.phase === "nudge") act = `<div class="nact"><button class="btn primary" id="nStart">Empezar</button><button class="btn" id="nSnooze">Posponer 5 min</button><button class="btn ghost" id="nOther">Otro</button><button class="btn ghost" id="nSkip">Saltar</button><span class="dur">${ex.secs < 60 ? ex.secs + " s" : ex.secs / 60 + " min"}</span></div>`;
+  if (S.phase === "active") act = `<div class="nact"><button class="btn primary" id="nDone">Listo</button><button class="btn" id="nStop">Parar</button><span class="dur" id="nLeft"></span></div>`;
+  if (S.phase === "done") act = `<div class="okline"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="11" fill="var(--ok)"/><path d="M6 11.5l3.2 3.2L16 8" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>¡Bien! Llevas ${rec().done} ${rec().done === 1 ? "pausa" : "pausas"} hoy.</div>`;
+  box.innerHTML = `<div class="ninner">
+      <div class="thumb">${drawCharacter(S.char, ex.pose, ex.face, S.phase === "active" ? "bob" : "")}</div>
+      <div class="nbody">
+        <div class="kicker">${info.kicker}</div>
+        <div class="nhead"><h3>${ex.title}</h3><span class="tally">${count} hoy</span></div>
+        <p class="desc">${ex.desc}</p>
+        <div class="dose-row"><span class="dose">${ex.dose}</span>
+          <button class="howto" id="nHow" aria-expanded="${open}" aria-controls="nSteps">Cómo hacerlo <span>▾</span></button></div>
+        <ol class="steps" id="nSteps" ${open ? "" : "hidden"}>${ex.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+        ${act}
+        ${S.phase === "nudge" ? `<p class="safety">Movimientos suaves y sin dolor.</p>` : ""}
+      </div>
+    </div><div class="prog"><i id="nProg"></i></div>`;
+  const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  on("nStart", startActive); on("nSnooze", snooze); on("nOther", another); on("nSkip", skip); on("nDone", complete); on("nStop", skip);
+  on("nHow", () => { box.dataset.open = open ? "0" : "1"; renderNudge(false); });
+}
+function renderPlan() {
+  const n = S.settings.interval, cur = S.cycle % 3;
+  $("plan").innerHTML = POOLS.map((p, i) => `<li class="${i === cur && S.phase !== "off" ? "now" : ""}">
+    <span class="when">+${n * (i + 1)} min</span><span class="what">${POOL_INFO[p].what}</span><span class="why">${POOL_INFO[p].why}</span></li>`).join("");
+}
+function streak() {
+  let s = 0; const d = new Date();
+  if ((S.days[dayKey(d)]?.done || 0) < 3) d.setDate(d.getDate() - 1);
+  for (let i = 0; i < 365; i++) {
+    const r = S.days[dayKey(d)];
+    if (r && r.done >= 3) s++;
+    else if (S.settings.weekdays && !workday(d) && i > 0) { /* fines de semana no rompen la racha */ }
+    else break;
+    d.setDate(d.getDate() - 1);
+  }
+  return s;
+}
+function renderToday() {
+  const d = new Date(), r = rec();
+  $("todayDate").textContent = `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  $("stDone").textContent = r.done; $("stMoves").textContent = r.moves; $("stStreak").textContent = streak();
+  const goal = S.settings.water;
+  $("glasses").innerHTML = Array.from({ length: Math.max(goal, r.water) }, (_, i) => `<span class="glass ${i < r.water ? "full" : ""}"></span>`).join("");
+  $("glasses").setAttribute("aria-label", `${r.water} de ${goal} vasos de agua`);
+  const L = "DLMXJVS"; let html = "";
+  for (let i = 6; i >= 0; i--) {
+    const x = new Date(); x.setDate(x.getDate() - i); const k = dayKey(x), done = S.days[k]?.done || 0;
+    html += `<div class="dot ${done >= 3 ? "met" : ""} ${i === 0 ? "today" : ""}"><i>${done || ""}</i>${L[x.getDay()]}</div>`;
+  }
+  $("week").innerHTML = html;
+}
+function update() {
+  const now = Date.now(); let count = "", label = "", frac = 0, small = false;
+  switch (S.phase) {
+    case "off": count = `${S.settings.interval}:00`; label = `entre pausas, de ${S.settings.start} a ${S.settings.end}`; break;
+    case "waiting": {
+      const left = S.nextAt - now;
+      if (left > intervalMs() + 60000) { count = clock(S.nextAt); small = true; const d = new Date(S.nextAt); label = `vuelvo el ${DAYS[d.getDay()]} a esta hora`; }
+      else { count = fmt(left); label = `para tu próxima pausa · ${upcoming().title}`; frac = (now - S.periodStart) / (S.nextAt - S.periodStart); }
+      break;
+    }
+    case "paused": count = "En pausa"; small = true; label = S.pausedUntil ? `vuelvo a las ${clock(S.pausedUntil)}` : "hasta que pulses Reanudar"; break;
+    case "nudge": count = "¡Ahora!"; label = "te toca una pausa corta"; frac = 1; break;
+    case "active": { const ex = EXBY[S.cur]; count = fmt(S.activeEndsAt - now); label = ex.title; frac = (now - S.activeStart) / (S.activeEndsAt - S.activeStart); break; }
+    case "done": count = "¡Hecho!"; small = true; label = `próxima en ${S.settings.interval} min`; frac = 0; break;
+  }
+  $("count").textContent = count; $("count").classList.toggle("small", small);
+  $("countLabel").textContent = label;
+  $("barFill").style.width = `${Math.min(100, Math.max(0, frac * 100))}%`;
+  if (S.phase === "active") {
+    const ex = EXBY[S.cur], f = Math.min(1, (now - S.activeStart) / (S.activeEndsAt - S.activeStart));
+    const left = $("nLeft"); if (left) left.textContent = `${fmt(S.activeEndsAt - now)} restantes`;
+    const pr = $("nProg"); if (pr) pr.style.width = `${f * 100}%`;
+    const idx = Math.min(ex.steps.length - 1, Math.floor(f * ex.steps.length));
+    document.querySelectorAll("#nSteps li").forEach((li, i) => li.classList.toggle("now", i === idx));
+  }
+}
+
+/* ---------- Reloj ---------- */
+let lastDay = dayKey(new Date()); let lastPerm = null;
+function tick() {
+  const now = Date.now();
+  if (S.phase === "waiting" && now >= S.nextAt) {
+    if (inHours(new Date())) startNudge();
+    else { S.periodStart = now; S.nextAt = nextWorkStart(); save(); render(); }
+  }
+  if (S.phase === "paused" && S.pausedUntil && now >= S.pausedUntil) resume();
+  if (S.phase === "active" && now >= S.activeEndsAt) complete();
+  if (S.phase === "done" && now >= S.doneUntil) { S.phase = "waiting"; save(); render(); }
+  if (S.phase === "nudge") { const due = [60000, 180000, 420000]; const r = Number(S.reminded) || 0; if (r < due.length && now - S.nudgeAt > due[r]) { S.reminded = r + 1; save(); play("nudge"); notify(EXBY[S.cur]); } }
+  const perm = canNotify() ? Notification.permission : "none"; if (perm !== lastPerm) { lastPerm = perm; renderNotif(); }
+  const k = dayKey(new Date()); if (k !== lastDay) { lastDay = k; pruneDays(); render(); }
+  update();
+}
+
+/* ---------- Ajustes y puesto ---------- */
+const SETUP = [
+  ["Pantalla a un brazo de distancia", "El borde superior, a la altura de tus ojos o un poco más abajo."],
+  ["Codos a unos 90°, cerca del cuerpo", "Muñecas rectas al escribir, sin apoyarlas dobladas."],
+  ["Pies apoyados en el suelo", "Si no llegas, usa un reposapiés o una caja."],
+  ["Espalda apoyada en el respaldo", "Que la zona lumbar tenga apoyo; un cojín sirve."],
+  ["Laptop elevada", "Súbela con un soporte o libros y usa teclado y ratón externos."],
+  ["Luz de lado, sin reflejos", "La ventana a un costado de la pantalla, no detrás ni enfrente."]
+];
+function renderSetup() {
+  const done = SETUP.filter((_, i) => S.setup[i]).length;
+  $("setupMeta").textContent = `${done} de ${SETUP.length}`;
+  $("setupList").innerHTML = `<p class="fine">Hazlo una vez. Un buen puesto evita la mitad de las molestias.</p>` +
+    SETUP.map(([t, s], i) => `<label class="check" for="setup_${i}"><input type="checkbox" id="setup_${i}" data-i="${i}" ${S.setup[i] ? "checked" : ""}><span>${t}<small>${s}</small></span></label>`).join("");
+  $("setupList").querySelectorAll("input").forEach(inp => inp.onchange = () => { S.setup[inp.dataset.i] = inp.checked; save(); renderSetup(); });
+}
+function renderSettings() {
+  $("chars").innerHTML = Object.entries(CHARS).map(([id, c]) => `<label class="charopt"><input type="radio" name="char" id="char_${id}" value="${id}" ${S.char === id ? "checked" : ""}><span class="face">${drawCharacter(id, "wave", "hello")}<b>${c.name}</b><small>${c.species}</small></span></label>`).join("");
+  $("chars").querySelectorAll("input").forEach(inp => inp.onchange = () => { S.char = inp.value; lastPhase = null; save(); render(); renderNotif(); });
+  const st = S.settings;
+  $("setInterval").value = st.interval; $("setStart").value = st.start; $("setEnd").value = st.end;
+  $("setWeekdays").checked = st.weekdays; $("setSound").checked = st.sound; $("setWater").value = st.water;
+}
+$("setInterval").onchange = e => { S.settings.interval = Number(e.target.value); if (S.phase === "waiting" && S.nextAt - S.periodStart <= 61 * 60000) S.nextAt = S.periodStart + intervalMs(); lastPhase = null; save(); render(); };
+$("setStart").onchange = e => { if (e.target.value) { S.settings.start = e.target.value; save(); render(); } };
+$("setEnd").onchange = e => { if (e.target.value) { S.settings.end = e.target.value; save(); render(); } };
+$("setWeekdays").onchange = e => { S.settings.weekdays = e.target.checked; save(); render(); };
+$("setSound").onchange = e => { S.settings.sound = e.target.checked; save(); };
+$("setWater").onchange = e => { const v = Math.min(14, Math.max(4, Number(e.target.value) || 8)); S.settings.water = v; e.target.value = v; save(); renderToday(); };
+$("testSound").onclick = () => { const s = S.settings.sound; S.settings.sound = true; play("nudge"); S.settings.sound = s; };
+$("waterPlus").onclick = () => { rec().water++; save(); renderToday(); };
+$("waterMinus").onclick = () => { const r = rec(); r.water = Math.max(0, r.water - 1); save(); renderToday(); };
+$("pauseMenu").querySelectorAll("[data-pause]").forEach(b => b.onclick = () => pauseFor(b.dataset.pause));
+document.addEventListener("pointerdown", ensureAudio, { once: true });
+
+/* ---------- Arranque (también recupera el estado al recargar) ---------- */
+if (S.cur && !EXBY[S.cur]) S.cur = null;
+if (["nudge", "active", "done"].includes(S.phase) && !S.cur) S.phase = "waiting";
+if (S.phase === "active" && Date.now() >= S.activeEndsAt) complete();
+if (S.phase === "done") S.phase = "waiting";
+if (S.phase === "waiting" && !S.nextAt) schedule();
+/* Al volver otro día (o tras horas cerrada) no dispares una pausa vieja: empieza a contar de nuevo. */
+if ((S.phase === "waiting" || S.phase === "nudge") && Date.now() - (S.phase === "nudge" ? S.nudgeAt : S.nextAt) > intervalMs()) { S.phase = "waiting"; schedule(); save(); }
+renderSetup(); renderSettings(); render(); renderNotif();
+$("notifBtn").onclick = askNotify;
+$("bannerBtn").onclick = askNotify;
+function testNudge() {
+  ensureAudio();
+  const msg = $("testMsg");
+  const say = t => { msg.textContent = t; $("bannerText").textContent = t; };
+  say("En 5 segundos suena y sale el aviso. Cambia ahora a otra ventana (por ejemplo, Excel) para ver cómo llega.");
+  setTimeout(() => {
+    const s = S.settings.sound; S.settings.sound = true; play("nudge"); S.settings.sound = s;
+    renderNotif();
+    const ok = canNotify() && Notification.permission === "granted";
+    if (ok) notify(upcoming());
+    say(ok ? "Aviso enviado. Debió aparecer abajo a la derecha de tu pantalla. Si no lo viste, revisa los pasos de Windows que te dio Claude."
+           : inFrame ? "Sonó, pero aquí dentro de Claude no hay avisos de Windows. Usa el archivo Pausita.html en Chrome o Edge."
+           : Notification.permission === "denied" ? "Sonó, pero los avisos de Windows están bloqueados. Permítelos desde el ícono a la izquierda de la barra de direcciones y recarga con F5."
+           : "Sonó, pero los avisos de Windows no están activados. Pulsa \"Activar avisos de Windows\".");
+  }, 5000);
+}
+$("testNudge").onclick = testNudge; $("bannerTest").onclick = testNudge;
+setInterval(tick, 1000);
+document.addEventListener("visibilitychange", tick);
+})();
+</script>
+</body></html>
