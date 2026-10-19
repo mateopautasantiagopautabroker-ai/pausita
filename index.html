@@ -270,6 +270,9 @@ details[open].card summary .meta::after{transform:rotate(180deg)}
           <div class="field"><label for="setStart">Horario</label>
             <div class="hours"><input type="time" id="setStart" aria-label="Hora de inicio"> a <input type="time" id="setEnd" aria-label="Hora de fin"></div></div>
           <label class="check" for="setWeekdays"><input type="checkbox" id="setWeekdays"><span>Solo de lunes a viernes</span></label>
+          <div class="field"><label for="offFrom">Vacaciones o días libres</label>
+            <span><input type="date" id="offFrom" aria-label="Desde"> a <input type="date" id="offTo" aria-label="Hasta (opcional)"> <button class="btn" id="offAdd">Agregar</button></span></div>
+          <p class="fine" id="offList"></p>
           <label class="check" for="setSound"><input type="checkbox" id="setSound"><span>Sonido al avisar</span></label>
           <div class="field"><span><b>Notificaciones de Windows</b><small class="fine" id="notifHint" style="display:block"></small></span>
             <button class="btn" id="notifBtn" hidden>Activar</button></div>
@@ -484,7 +487,7 @@ const POOL_INFO = {
 /* ---------- Estado ---------- */
 const DEF = { char: "chispa", settings: { interval: 20, start: "09:00", end: "18:00", weekdays: true, sound: true, water: 8 },
   phase: "off", nextAt: 0, periodStart: 0, pausedUntil: null, cycle: 0, ptr: { stretch: 0, micro: 0, move: 0 },
-  cur: null, activeStart: 0, activeEndsAt: 0, doneUntil: 0, nudgeAt: 0, reminded: false, days: {}, setup: {} };
+  cur: null, activeStart: 0, activeEndsAt: 0, doneUntil: 0, nudgeAt: 0, reminded: false, days: {}, setup: {}, off: [] };
 let S = load();
 function load() {
   try {
@@ -501,7 +504,8 @@ function pruneDays() { const keep = Object.keys(S.days).sort().slice(-60); S.day
 const char = () => CHARS[S.char] || CHARS.chispa;
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const toMin = t => { const [h, m] = (t || "0:0").split(":").map(Number); return h * 60 + m; };
-function workday(d) { return !S.settings.weekdays || (d.getDay() !== 0 && d.getDay() !== 6); }
+const isOff = d => S.off.includes(dayKey(d));
+function workday(d) { return !isOff(d) && (!S.settings.weekdays || (d.getDay() !== 0 && d.getDay() !== 6)); }
 function inHours(d) { const m = d.getHours() * 60 + d.getMinutes(); return workday(d) && m >= toMin(S.settings.start) && m < toMin(S.settings.end); }
 function nextWorkStart(from = new Date()) {
   const [h, m] = S.settings.start.split(":").map(Number);
@@ -588,6 +592,7 @@ function startDay() { ensureAudio(); askNotify(); S.phase = "waiting"; schedule(
 function startNudge() { S.cur = upcoming().id; S.phase = "nudge"; S.nudgeAt = Date.now(); S.reminded = 0; save(); render(true); play("nudge"); notify(EXBY[S.cur]); }
 function startActive() { closeNotif(); const ex = EXBY[S.cur]; S.phase = "active"; S.activeStart = Date.now(); S.activeEndsAt = S.activeStart + ex.secs * 1000; save(); render(); }
 function complete() {
+  closeNotif();
   const ex = EXBY[S.cur], r = rec(); r.done++; r.ex[ex.id] = (r.ex[ex.id] || 0) + 1; if (ex.pool === "move") r.moves++;
   advance(); S.phase = "done"; S.doneUntil = Date.now() + 4500; schedule(); save(); render(); play("done");
 }
@@ -695,7 +700,7 @@ function streak() {
   for (let i = 0; i < 365; i++) {
     const r = S.days[dayKey(d)];
     if (r && r.done >= 3) s++;
-    else if (S.settings.weekdays && !workday(d) && i > 0) { /* fines de semana no rompen la racha */ }
+    else if (!workday(d) && i > 0) { /* fines de semana y días libres/vacaciones no rompen la racha */ }
     else break;
     d.setDate(d.getDate() - 1);
   }
@@ -775,7 +780,19 @@ function renderSetup() {
     SETUP.map(([t, s], i) => `<label class="check" for="setup_${i}"><input type="checkbox" id="setup_${i}" data-i="${i}" ${S.setup[i] ? "checked" : ""}><span>${t}<small>${s}</small></span></label>`).join("");
   $("setupList").querySelectorAll("input").forEach(inp => inp.onchange = () => { S.setup[inp.dataset.i] = inp.checked; save(); renderSetup(); });
 }
+function renderOff() {
+  S.off = S.off.filter(k => k >= dayKey(new Date())).sort();
+  $("offList").innerHTML = S.off.length ? S.off.map(k => `<button class="btn ghost" data-off="${k}" title="Quitar">${k.slice(8)}/${k.slice(5, 7)} ✕</button>`).join(" ") : "Sin días libres programados.";
+  $("offList").querySelectorAll("[data-off]").forEach(b => b.onclick = () => { S.off = S.off.filter(k => k !== b.dataset.off); save(); renderOff(); render(); });
+}
+$("offAdd").onclick = () => {
+  const a = $("offFrom").value, b = $("offTo").value || a; if (!a || b < a) return;
+  const d = new Date(a + "T12:00"), end = new Date(b + "T12:00");
+  for (let i = 0; d <= end && i < 120; i++, d.setDate(d.getDate() + 1)) { const k = dayKey(d); if (!S.off.includes(k)) S.off.push(k); }
+  $("offFrom").value = $("offTo").value = ""; save(); renderOff(); render();
+};
 function renderSettings() {
+  renderOff();
   $("chars").innerHTML = Object.entries(CHARS).map(([id, c]) => `<label class="charopt"><input type="radio" name="char" id="char_${id}" value="${id}" ${S.char === id ? "checked" : ""}><span class="face">${drawCharacter(id, "wave", "hello")}<b>${c.name}</b><small>${c.species}</small></span></label>`).join("");
   $("chars").querySelectorAll("input").forEach(inp => inp.onchange = () => { S.char = inp.value; lastPhase = null; save(); render(); renderNotif(); });
   const st = S.settings;
@@ -824,6 +841,8 @@ function testNudge() {
 $("testNudge").onclick = testNudge; $("bannerTest").onclick = testNudge;
 setInterval(tick, 1000);
 document.addEventListener("visibilitychange", tick);
+/* Otra pestaña abierta con Pausita: sincroniza para que no repita avisos con estado viejo. */
+window.addEventListener("storage", e => { if (e.key === KEY) { S = load(); closeNotif(); lastPhase = null; render(); } });
 })();
 </script>
 </body></html>
